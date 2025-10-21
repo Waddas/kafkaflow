@@ -37,7 +37,8 @@ internal class MessageProducer : IMessageProducer, IDisposable
         object messageKey,
         object messageValue,
         IMessageHeaders headers = null,
-        int? partition = null)
+        int? partition = null,
+        DateTime? timestamp = null)
     {
         DeliveryResult<byte[], byte[]> report = null;
 
@@ -60,7 +61,7 @@ internal class MessageProducer : IMessageProducer, IDisposable
                     async context =>
                     {
                         report = await this
-                            .InternalProduceAsync(context, partition)
+                            .InternalProduceAsync(context, partition, timestamp)
                             .ConfigureAwait(false);
                     })
                 .ConfigureAwait(false);
@@ -80,7 +81,8 @@ internal class MessageProducer : IMessageProducer, IDisposable
         object messageKey,
         object messageValue,
         IMessageHeaders headers = null,
-        int? partition = null)
+        int? partition = null,
+        DateTime? timestamp = null)
     {
         if (string.IsNullOrWhiteSpace(_configuration.DefaultTopic))
         {
@@ -93,7 +95,8 @@ internal class MessageProducer : IMessageProducer, IDisposable
             messageKey,
             messageValue,
             headers,
-            partition);
+            partition,
+            timestamp);
     }
 
     public void Produce(
@@ -102,7 +105,8 @@ internal class MessageProducer : IMessageProducer, IDisposable
         object messageValue,
         IMessageHeaders headers = null,
         Action<DeliveryReport<byte[], byte[]>> deliveryHandler = null,
-        int? partition = null)
+        int? partition = null,
+        DateTime? timestamp = null)
     {
         var messageScope = _producerDependencyScope.Resolver.CreateScope();
 
@@ -125,6 +129,7 @@ internal class MessageProducer : IMessageProducer, IDisposable
                     this.InternalProduce(
                         context,
                         partition,
+                        timestamp,
                         report =>
                         {
                             if (report.Error.IsError)
@@ -166,7 +171,8 @@ internal class MessageProducer : IMessageProducer, IDisposable
         object messageValue,
         IMessageHeaders headers = null,
         Action<DeliveryReport<byte[], byte[]>> deliveryHandler = null,
-        int? partition = null)
+        int? partition = null,
+        DateTime? timestamp = null)
     {
         if (string.IsNullOrWhiteSpace(_configuration.DefaultTopic))
         {
@@ -180,7 +186,8 @@ internal class MessageProducer : IMessageProducer, IDisposable
             messageValue,
             headers,
             deliveryHandler,
-            partition);
+            partition,
+            timestamp);
     }
 
     public void Dispose()
@@ -206,7 +213,7 @@ internal class MessageProducer : IMessageProducer, IDisposable
         concreteProducerContext.Partition = result.Partition;
     }
 
-    private static Message<byte[], byte[]> CreateMessage(IMessageContext context)
+    private static Message<byte[], byte[]> CreateMessage(IMessageContext context, DateTime? timestamp)
     {
         var value = context.Message.Value switch
         {
@@ -227,12 +234,16 @@ internal class MessageProducer : IMessageProducer, IDisposable
                 "You should serialize or encode your message object using a middleware")
         };
 
+        var kafkaTimestamp = timestamp.HasValue
+            ? new Timestamp(timestamp.Value)
+            : Timestamp.Default;
+
         return new()
         {
             Key = key,
             Value = value,
             Headers = ((MessageHeaders)context.Headers).GetKafkaHeaders(),
-            Timestamp = Timestamp.Default,
+            Timestamp = kafkaTimestamp,
         };
     }
 
@@ -314,12 +325,12 @@ internal class MessageProducer : IMessageProducer, IDisposable
             new { Error = error });
     }
 
-    private async Task<DeliveryResult<byte[], byte[]>> InternalProduceAsync(IMessageContext context, int? partition)
+    private async Task<DeliveryResult<byte[], byte[]>> InternalProduceAsync(IMessageContext context, int? partition, DateTime? timestamp)
     {
         DeliveryResult<byte[], byte[]> result = null;
 
         var localProducer = this.EnsureProducer();
-        var message = CreateMessage(context);
+        var message = CreateMessage(context, timestamp);
 
         try
         {
@@ -349,10 +360,11 @@ internal class MessageProducer : IMessageProducer, IDisposable
     private void InternalProduce(
         IMessageContext context,
         int? partition,
+        DateTime? timestamp,
         Action<DeliveryReport<byte[], byte[]>> deliveryHandler)
     {
         var localProducer = this.EnsureProducer();
-        var message = CreateMessage(context);
+        var message = CreateMessage(context, timestamp);
 
         if (partition.HasValue)
         {

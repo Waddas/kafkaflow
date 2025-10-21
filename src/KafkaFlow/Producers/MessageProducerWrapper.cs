@@ -20,27 +20,31 @@ internal class MessageProducerWrapper<TProducer> : IMessageProducer<TProducer>
         object messageKey,
         object message,
         IMessageHeaders headers = null,
-        int? partition = null)
+        int? partition = null,
+        DateTime? timestamp = null)
     {
         return _producer.ProduceAsync(
             topic,
             messageKey,
             message,
             headers,
-            partition);
+            partition,
+            timestamp);
     }
 
     public Task<DeliveryResult<byte[], byte[]>> ProduceAsync(
         object messageKey,
         object message,
         IMessageHeaders headers = null,
-        int? partition = null)
+        int? partition = null,
+        DateTime? timestamp = null)
     {
         return _producer.ProduceAsync(
             messageKey,
             message,
             headers,
-            partition);
+            partition,
+            timestamp);
     }
 
     public void Produce(
@@ -49,7 +53,8 @@ internal class MessageProducerWrapper<TProducer> : IMessageProducer<TProducer>
         object message,
         IMessageHeaders headers = null,
         Action<DeliveryReport<byte[], byte[]>> deliveryHandler = null,
-        int? partition = null)
+        int? partition = null,
+        DateTime? timestamp = null)
     {
         _producer.Produce(
             topic,
@@ -57,7 +62,8 @@ internal class MessageProducerWrapper<TProducer> : IMessageProducer<TProducer>
             message,
             headers,
             deliveryHandler,
-            partition);
+            partition,
+            timestamp);
     }
 
     public void Produce(
@@ -65,13 +71,15 @@ internal class MessageProducerWrapper<TProducer> : IMessageProducer<TProducer>
         object message,
         IMessageHeaders headers = null,
         Action<DeliveryReport<byte[], byte[]>> deliveryHandler = null,
-        int? partition = null)
+        int? partition = null,
+        DateTime? timestamp = null)
     {
         _producer.Produce(
             messageKey,
             message,
             headers,
             deliveryHandler,
-            partition);
+            partition,
+            timestamp);
     }
 }

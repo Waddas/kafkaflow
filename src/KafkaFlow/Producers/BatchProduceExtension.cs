@@ -60,7 +60,9 @@ public static class BatchProduceExtension
                     {
                         completionSource.SetResult(items);
                     }
-                });
+                },
+                partition: null,
+                item.Timestamp);
         }
 
         return completionSource.Task;

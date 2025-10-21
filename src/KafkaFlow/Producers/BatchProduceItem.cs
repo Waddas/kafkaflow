@@ -1,3 +1,4 @@
+using System;
 using Confluent.Kafka;
 
 namespace KafkaFlow.Producers;
@@ -14,16 +15,19 @@ public class BatchProduceItem
     /// <param name="messageKey">The message partition key</param>
     /// <param name="messageValue">The message content</param>
     /// <param name="headers">The message headers</param>
+    /// <param name="timestamp">The message timestamp. If not provided, the broker will set the timestamp.</param>
     public BatchProduceItem(
         string topic,
         object messageKey,
         object messageValue,
-        IMessageHeaders headers)
+        IMessageHeaders headers,
+        DateTime? timestamp = null)
     {
         this.Topic = topic;
         this.MessageKey = messageKey;
         this.MessageValue = messageValue;
         this.Headers = headers;
+        this.Timestamp = timestamp;
     }
 
     /// <summary>
@@ -45,6 +49,11 @@ public class BatchProduceItem
     /// Gets the message headers
     /// </summary>
     public IMessageHeaders Headers { get; }
+
+    /// <summary>
+    /// Gets the message timestamp. If not set, the broker will set the timestamp.
+    /// </summary>
+    public DateTime? Timestamp { get; }
 
     /// <summary>
     /// Gets the delivery report after the production
